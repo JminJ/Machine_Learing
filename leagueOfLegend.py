@@ -13,6 +13,9 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.decomposition import PCA
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import accuracy_score
+from sklearn.linear_model import LogisticRegression
+
+cv = 8
 
 dataset = pd.read_csv('D:\machineLearing_study\high_diamond_ranked_10min.csv')
 corr = dataset.corr()
@@ -22,7 +25,7 @@ X = scaler.fit_transform(dataset.drop(['gameId','blueWins'], axis = 1))
 y = dataset.iloc[:,1]
 x_train, x_test, y_train, y_test = train_test_split(X,y, test_size = 0.2)
 
-pca = PCA(n_components = 20)
+pca = PCA(n_components = 10)
 pca_xtrain = pca.fit_transform(x_train)
 pca_xtest = pca.fit_transform(x_test)
 
@@ -34,7 +37,7 @@ param_grid = {
     'min_samples_leaf' : [5, 8, 10]
 }
 decision_clf = DecisionTreeClassifier()
-grid_search = GridSearchCV(estimator=decision_clf, param_grid=param_grid, cv = 15, n_jobs = 4)
+grid_search = GridSearchCV(estimator=decision_clf, param_grid=param_grid, cv = cv, n_jobs = 4)
 
 
 param_grid2 = {
@@ -45,7 +48,7 @@ param_grid2 = {
     'max_features': [2,4,6,8,10]
 }
 ran_clf = RandomForestClassifier()
-grid_search2 = GridSearchCV(estimator = ran_clf, param_grid = param_grid2, cv = 10, verbose = 2, n_jobs=4)
+grid_search2 = GridSearchCV(estimator = ran_clf, param_grid = param_grid2, cv = cv, verbose = 2, n_jobs=4)
 
 
 param_grid3 = {
@@ -53,9 +56,23 @@ param_grid3 = {
     'kernel' : ['linear']
 }
 svc_clf = SVC()
-grid_search3 = GridSearchCV(estimator = svc_clf, param_grid = param_grid3, cv = 10, n_jobs = 4)
+grid_search3 = GridSearchCV(estimator = svc_clf, param_grid = param_grid3, cv = cv, n_jobs = 4)
 
-votingC = VotingClassifier(estimators  = [('linear',grid_search),('randomF',grid_search2)], voting='soft', n_jobs=4)
+param_grid4 = {
+    'C' : [0.001,0.01, 0.1, 1, 10, 100,1000],
+    'solver' : ['lbfgs']
+}
+
+logistic_clf = LogisticRegression()
+grid_search4 = GridSearchCV(estimator= logistic_clf, param_grid=param_grid4, cv = cv, n_jobs = 4)
+
+votingC = VotingClassifier(estimators  = [('Decision',grid_search),('randomF',grid_search2),('logistic',grid_search4)], voting='hard', n_jobs=4)
 votingC = votingC.fit(x_train, y_train)
 voReC = votingC.predict(x_test)
 print(accuracy_score(y_test, voReC))
+
+
+""" history = grid_search2.fit(x_train, y_train)
+print(history.best_estimator_)
+y_pred = history.predict(x_test)
+print(accuracy_score(y_test, y_pred)) """
